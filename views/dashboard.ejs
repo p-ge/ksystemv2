@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JX Dashboard</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="page" style="padding-top: 24px;">
+      <div style="width: 1100px; max-width: 100%;">
+        <div class="row" style="align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div class="row" style="align-items: center; gap: 12px;">
+            <div class="logo-wrap" style="width: 60px; height: 60px; border-radius: 50%; margin: 0; overflow: hidden;">
+              <img src="/logo.png" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+            </div>
+            <div>
+              <h2 id="dash-title" style="margin: 0;">JX Dashboard</h2>
+              <p class="muted" style="margin: 2px 0 0;">PIN + 2FA protected · Prefix <span class="code"><%= settings.prefix %></span></p>
+            </div>
+          </div>
+          <button id="logout" class="btn btn-ghost">Logout</button>
+        </div>
+
+        <div class="tabs" style="margin-bottom: 14px;">
+          <div class="tab active" data-tab="tab-dashboard">Dashboard</div>
+          <div class="tab" data-tab="tab-keys">Keys</div>
+          <div class="tab" data-tab="tab-universal">Universal Key</div>
+          <div class="tab" data-tab="tab-giveaway">Giveaways</div>
+          <div class="tab" data-tab="tab-test">Test</div>
+          <div class="tab" data-tab="tab-bot">Bot</div>
+          <div class="tab" data-tab="tab-settings">Settings</div>
+        </div>
+
+        <div id="tab-dashboard" class="panel">
+          <div class="stat-grid">
+            <div class="stat">
+              <small>Total Generated</small>
+              <strong id="stat-total">0</strong>
+            </div>
+            <div class="stat">
+              <small>Active Keys</small>
+              <strong id="stat-active">0</strong>
+            </div>
+            <div class="stat" id="stat-requests-wrap">
+              <small>Pending Requests</small>
+              <strong id="stat-requests">0</strong>
+            </div>
+          </div>
+          <div class="box" style="margin-top: 15px; border: 1px solid var(--border); padding: 15px; border-radius: var(--radius); text-align: center;">
+            <p style="margin-bottom: 10px; color: var(--text-muted)">Master Backup Engine</p>
+            <div class="row" style="justify-content: center; gap: 10px;">
+              <button id="master-export-keys" class="btn btn-primary">Download All Keys</button>
+              <button id="master-import-keys" class="btn btn-primary outline">Load Keys</button>
+              <input type="file" id="master-import-keys-file" accept=".json" style="display:none;" />
+            </div>
+            <p class="muted" style="margin-top: 10px; font-size: 0.8rem;">Downloads ALL parameters including universal, giveaways, unused list, and general database entries inside one global backup.</p>
+          </div>
+        </div>
+
+        <div id="tab-keys" class="panel" style="display: none;">
+          <div class="tabs" style="margin-bottom: 12px;">
+            <div class="tab active" data-sub="request" id="tab-sub-request">Request Key</div>
+            <div class="tab" data-sub="list">Keys List</div>
+            <div class="tab" data-sub="unused">Unused Keys</div>
+            <div class="tab" data-sub="generate">Generate Key</div>
+          </div>
+
+          <div data-subpanel="request" id="subpanel-request">
+            <label>HWID</label>
+            <input id="req-hwid" placeholder="User HWID / unique identifier" />
+            <button id="req-btn" class="btn btn-primary" style="margin-top: 10px;">Request Key (auto-approve)</button>
+            <p class="muted" style="margin-top: 8px;">Requests auto-expire after 20 minutes of inactivity.</p>
+          </div>
+
+          <div data-subpanel="list" style="display: none;">
+            <div class="row" style="align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+              <div class="row" style="align-items: center; gap: 6px;">
+                <select id="filter">
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="free">Free</option>
+                  <option value="premium">Premium</option>
+                  <option value="expired">Expired</option>
+                  <option value="unused">Unused</option>
+                </select>
+                <button id="refresh" class="btn btn-ghost">Refresh</button>
+                <button id="export-keys" class="btn btn-ghost">Download All Keys</button>
+                <button id="import-keys" class="btn btn-ghost">Load Keys</button>
+                <input type="file" id="import-keys-file" accept=".json" style="display:none;" />
+              </div>
+              <input
+                id="key-search"
+                type="text"
+                placeholder="Search by key or HWID..."
+                style="flex: 1 1 220px; max-width: 360px;"
+              />
+            </div>
+            <div style="overflow: auto;">
+              <table class="table" id="keys-table">
+                <thead>
+                  <tr>
+                    <th>Key</th>
+                    <th>HWID</th>
+                    <th>Tier</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div data-subpanel="unused" style="display: none;">
+            <div class="row" style="align-items: center; margin-bottom: 10px;">
+              <button id="refresh-unused" class="btn btn-ghost">Refresh</button>
+            </div>
+            <div style="overflow: auto;">
+              <table class="table" id="unused-table">
+                <thead>
+                  <tr>
+                    <th>Key</th>
+                    <th>HWID</th>
+                    <th>Tier</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div data-subpanel="generate" style="display: none;">
+            <div class="two-col grid">
+              <div>
+                <label>HWID (optional for premium/free)</label>
+                <input id="gen-hwid" placeholder="Leave blank for unbound" />
+              </div>
+              <div>
+                <label>Tier</label>
+                <select id="gen-tier">
+                  <option value="premium">Premium</option>
+                  <option value="free">Free</option>
+                </select>
+              </div>
+            </div>
+            <label>Expiration</label>
+            <div class="row">
+              <button class="btn btn-ghost exp" data-hours="12">12h</button>
+              <button class="btn btn-ghost exp" data-hours="24">24h</button>
+              <button class="btn btn-ghost exp" data-hours="24">1d</button>
+              <button class="btn btn-ghost exp" data-hours="720">1m</button>
+              <button class="btn btn-ghost exp" data-hours="8760">1y</button>
+              <button class="btn btn-ghost exp" data-hours="87600">10y</button>
+              <button class="btn btn-ghost exp" data-hours="lifetime">Lifetime</button>
+            </div>
+            <label>Custom Hours</label>
+            <input id="gen-hours" type="number" min="1" placeholder="e.g., 48 for 2 days" />
+            <button id="gen-btn" class="btn btn-primary" style="margin-top: 12px;">Generate Key</button>
+          </div>
+        </div>
+
+        <div id="tab-universal" class="panel" style="display: none;">
+          <div class="tabs" style="margin-bottom: 12px;">
+            <div class="tab active" data-sub="univ-list">Universal Key List</div>
+            <div class="tab" data-sub="univ-generate">Generate Universal Key</div>
+          </div>
+
+          <div data-subpanel="univ-list">
+            <div class="row" style="align-items: center; margin-bottom: 10px;">
+              <button id="refresh-univ" class="btn btn-ghost">Refresh</button>
+            </div>
+            <div style="overflow: auto;">
+              <table class="table" id="univ-table">
+                <thead>
+                  <tr>
+                    <th>Key</th>
+                    <th>Tier</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div data-subpanel="univ-generate" style="display: none;">
+            <label>Expiration</label>
+            <div class="row">
+              <button class="btn btn-ghost exp" data-hours="12">12h</button>
+              <button class="btn btn-ghost exp" data-hours="24">24h</button>
+              <button class="btn btn-ghost exp" data-hours="720">1m</button>
+              <button class="btn btn-ghost exp" data-hours="lifetime">Lifetime</button>
+            </div>
+            <label>Custom Hours</label>
+            <input id="gen-univ-hours" type="number" min="1" placeholder="e.g., 48 for 2 days" />
+            <button id="gen-univ-btn" class="btn btn-primary" style="margin-top: 12px;">Generate Universal Key</button>
+            <p class="muted" style="margin-top: 8px;">Universal keys bypass all HWID locks natively. Any client device can authenticate with one simultaneously.</p>
+          </div>
+        </div>
+
+        <div id="tab-giveaway" class="panel" style="display: none;">
+          <div class="tabs" style="margin-bottom: 12px;">
+            <div class="tab active" data-sub="giveaway-list">All Giveaway Keys</div>
+            <div class="tab" data-sub="giveaway-unused">Unused Giveaways</div>
+            <div class="tab" data-sub="giveaway-generate">Generate Giveaway Key</div>
+          </div>
+
+          <div data-subpanel="giveaway-list">
+            <div class="row" style="align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+              <div class="row" style="align-items: center; gap: 6px;">
+                <button id="refresh-giveaway" class="btn btn-ghost">Refresh</button>
+                <button id="export-giveaway" class="btn btn-ghost">Download All Giveaway Keys</button>
+                <button id="import-giveaway" class="btn btn-ghost">Load Giveaway Keys</button>
+                <input type="file" id="import-giveaway-file" accept=".json" style="display:none;" />
+              </div>
+            </div>
+            <div style="overflow: auto;">
+              <table class="table" id="giveaway-table">
+                <thead>
+                  <tr>
+                    <th>Key</th>
+                    <th>HWID</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div data-subpanel="giveaway-unused" style="display: none;">
+            <div class="row" style="align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+              <div class="row" style="align-items: center; gap: 6px;">
+                <button id="refresh-giveaway-unused" class="btn btn-ghost">Refresh</button>
+                <button id="export-giveaway-unused" class="btn btn-ghost">Download Unused Giveaways</button>
+                <button id="import-giveaway-unused" class="btn btn-ghost">Load Giveaways</button>
+                <input type="file" id="import-giveaway-unused-file" accept=".json" style="display:none;" />
+              </div>
+            </div>
+            <div style="overflow: auto;">
+              <table class="table" id="giveaway-unused-table">
+                <thead>
+                  <tr>
+                    <th>Key</th>
+                    <th>HWID</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div data-subpanel="giveaway-generate" style="display: none;">
+            <label>Expiration</label>
+            <div class="row">
+              <button class="btn btn-ghost exp" data-hours="12">12h</button>
+              <button class="btn btn-ghost exp" data-hours="24">24h</button>
+              <button class="btn btn-ghost exp" data-hours="720">1m</button>
+              <button class="btn btn-ghost exp" data-hours="lifetime">Lifetime</button>
+            </div>
+            <label>Custom Hours</label>
+            <input id="gen-giveaway-hours" type="number" min="1" placeholder="e.g., 48 for 2 days" />
+            <button id="gen-giveaway-btn" class="btn btn-primary" style="margin-top: 12px;">Generate Giveaway Key</button>
+          </div>
+        </div>
+
+        <div id="tab-settings" class="panel" style="display: none;">
+          <div class="two-col grid">
+            <div>
+              <label>Key Prefix</label>
+              <input id="set-prefix" value="<%= settings.prefix %>" />
+            </div>
+            <div>
+              <label>Default Checkpoints</label>
+              <input id="set-checkpoints" type="number" min="1" value="<%= settings.checkpoints %>" />
+            </div>
+            <div>
+              <label>Default Expiration (hours)</label>
+              <input id="set-exp" type="number" min="1" value="<%= settings.expirationHours %>" />
+            </div>
+            <div>
+              <label>Generate Limit Per HWID</label>
+              <input id="set-generate-limit" type="number" min="1" value="<%= settings.generateLimit || 3 %>" />
+            </div>
+            <div>
+              <label>Add Time To Existing Key (hours)</label>
+              <input id="set-add-time-hours" type="number" min="1" value="<%= settings.addTimeHours || 12 %>" />
+            </div>
+            <div>
+              <label>Start Button Cooldown (minutes)</label>
+              <input id="set-start-cooldown-mins" type="number" min="1" value="<%= settings.startCooldownMinutes || 5 %>" />
+            </div>
+            <div>
+              <label>Plus Time Cooldown (hours)</label>
+              <input id="set-plus-time-cooldown-hours" type="number" min="1" value="<%= settings.plusTimeCooldownHours || 12 %>" />
+            </div>
+            <div>
+              <label>Plus Time Uses Before Cooldown</label>
+              <input id="set-plus-time-uses" type="number" min="1" value="<%= settings.plusTimeUsesBeforeCooldown || 2 %>" />
+            </div>
+            <div>
+              <label>Test Key Auto Delete (hours)</label>
+              <input id="set-test-key-hours" type="number" min="1" value="<%= settings.testKeyHours || 48 %>" />
+            </div>
+            <div>
+              <label>Token Limit</label>
+              <input id="set-token-limit" type="number" min="1" value="<%= typeof settings.tokenLimit !== 'undefined' ? settings.tokenLimit : 3 %>" />
+            </div>
+            <div>
+              <label>Token Limit to Genrate key</label>
+              <input id="set-token-limit-generate" type="number" min="0" value="<%= typeof settings.tokenLimitGenerateKey !== 'undefined' ? settings.tokenLimitGenerateKey : 3 %>" />
+            </div>
+            <div>
+              <label>Token Limit to Extend Key</label>
+              <input id="set-token-limit-extend" type="number" min="0" value="<%= typeof settings.tokenLimitExtendKey !== 'undefined' ? settings.tokenLimitExtendKey : 3 %>" />
+            </div>
+            <div>
+              <label>Token Limit To Buy</label>
+              <input id="set-token-limit-buy" type="number" min="1" value="<%= typeof settings.tokenLimitToBuy !== 'undefined' ? settings.tokenLimitToBuy : 9 %>" />
+            </div>
+            <div>
+              <label>Keyless Mode</label>
+              <div class="row">
+                <label class="muted"><input id="set-keyless" type="checkbox" <%= settings.keyless ? 'checked' : '' %> /> Enable</label>
+              </div>
+            </div>
+            <div>
+              <label>JX-Guest</label>
+              <div class="row">
+                <label class="muted"><input id="set-guest-enabled" type="checkbox" <%= settings.guestEnabled !== false ? 'checked' : '' %> /> Allow JX-Guest login (PIN 0000 + 2FA 000001)</label>
+              </div>
+            </div>
+            <div>
+              <label>Anti Bypass</label>
+              <div class="row">
+                <label class="muted"><input id="set-anti-bypass" type="checkbox" <%= settings.antiBypass !== false ? 'checked' : '' %> /> Enable stricter anti-bypass checks</label>
+              </div>
+            </div>
+            <div>
+              <label>Anti Extension (Tampermonkey / Violentmonkey)</label>
+              <div class="row">
+                <label class="muted"><input id="set-anti-extension" type="checkbox" <%= settings.antiExtension !== false ? 'checked' : '' %> /> Block while these extensions are detected</label>
+              </div>
+            </div>
+            <div>
+              <label>Bind Premium Key</label>
+              <div class="row">
+                <label class="muted"><input id="set-bind-premium-key" type="checkbox" <%= settings.bindPremiumKey !== false ? 'checked' : '' %> /> Require premium key activation via bot</label>
+              </div>
+            </div>
+          </div>
+          <hr style="margin:16px 0;border:none;border-top:1px solid rgba(148,163,184,0.35);" />
+          <div class="two-col grid">
+            <div style="grid-column:1 / -1;">
+              <label>Boost Mode</label>
+              <div class="row">
+                <label class="muted"><input id="set-boost-enabled" type="checkbox" <%= settings.boostMode && settings.boostMode.enabled ? 'checked' : '' %> /> Enable 5s support screen before checkpoints</label>
+              </div>
+            </div>
+            <div>
+              <label>Boost: Like YouTube Video (link)</label>
+              <input id="set-boost-like" type="url" placeholder="https://..." value="<%= settings.boostMode && settings.boostMode.likeUrl ? settings.boostMode.likeUrl : '' %>" />
+            </div>
+            <div>
+              <label>Boost: Subscribe Channel (link)</label>
+              <input id="set-boost-subscribe" type="url" placeholder="https://..." value="<%= settings.boostMode && settings.boostMode.subscribeUrl ? settings.boostMode.subscribeUrl : '' %>" />
+            </div>
+            <div>
+              <label>Boost: Join Discord Server (link)</label>
+              <input id="set-boost-discord" type="url" placeholder="https://..." value="<%= settings.boostMode && settings.boostMode.discordUrl ? settings.boostMode.discordUrl : '' %>" />
+            </div>
+          </div>
+          <hr style="margin:16px 0;border:none;border-top:1px solid rgba(148,163,184,0.35);" />
+          <div class="two-col grid">
+            <div style="grid-column:1 / -1;">
+              <label>Tutorial Video</label>
+              <div class="row">
+                <label class="muted"><input id="set-tutorial-enabled" type="checkbox" <%= settings.tutorial && settings.tutorial.enabled ? 'checked' : '' %> /> Show tutorial link on service selection & checkpoints</label>
+              </div>
+            </div>
+            <div style="grid-column:1 / -1;">
+              <label>Tutorial Video Link</label>
+              <input id="set-tutorial-url" type="text" placeholder="https://youtube.com/watch?v=... or <iframe ...></iframe>" value="<%= settings.tutorial && settings.tutorial.url ? settings.tutorial.url : '' %>" />
+            </div>
+          </div>
+          <button id="save-settings" class="btn btn-primary" style="margin-top: 12px;">Save Settings</button>
+        </div>
+
+        <div id="tab-test" class="panel" style="display:none;">
+          <h3 style="margin:0 0 10px;">Checkpoint System Test</h3>
+          <p class="muted" style="margin-bottom:12px;">Generate a temporary test HWID/checkpoint link (auto cleanup in 2 days by default).</p>
+          <div class="row" style="gap:8px;align-items:center;">
+            <button id="gen-test-checkpoint" class="btn btn-primary">Generate Test Checkpoint</button>
+          </div>
+          <label>Generated Test Checkpoint URL</label>
+          <div class="row" style="gap:8px;">
+            <input id="test-checkpoint-url" readonly placeholder="Click generate..." />
+            <button id="copy-test-checkpoint-url" class="btn btn-ghost">Copy</button>
+          </div>
+          <label>Generated Test HWID</label>
+          <input id="test-hwid" readonly placeholder="Will appear after generation" />
+        </div>
+
+        <div id="tab-bot" class="panel" style="display:none;">
+          <h3 style="margin:0 0 10px;">Discord Bot</h3>
+          <div class="tabs" data-subset="true" style="margin-bottom: 12px;">
+            <div class="tab active" data-sub="bot-key">Key</div>
+            <div class="tab" data-sub="bot-ticket">Ticket</div>
+          </div>
+          <div data-subpanel="bot-key">
+            <p class="muted" style="margin-bottom:12px;">Key bot connection for premium commands.</p>
+            <div class="two-col grid">
+              <div style="grid-column:1 / -1;">
+                <label>Discord Application ID (Client ID)</label>
+                <input id="bot-app-id" type="text" placeholder="Paste bot application/client id" value="<%= settings.bot && settings.bot.appId ? settings.bot.appId : '' %>" />
+              </div>
+              <div style="grid-column:1 / -1;">
+                <label>Discord Bot Token</label>
+                <input id="bot-token" type="password" placeholder="Paste bot token" value="<%= settings.bot && settings.bot.token ? settings.bot.token : '' %>" />
+              </div>
+              <div style="grid-column:1 / -1;">
+                <label>Activation Token</label>
+                <div class="row" style="gap:8px;">
+                  <input id="bot-activation-token" readonly value="<%= settings.bot && settings.bot.activationToken ? settings.bot.activationToken : '' %>" />
+                  <button id="bot-copy-activation-token" class="btn btn-ghost">Copy</button>
+                  <button id="bot-regenerate-activation-token" class="btn btn-ghost">Regenerate</button>
+                </div>
+              </div>
+            </div>
+            <button id="bot-save" class="btn btn-primary" style="margin-top: 12px;">Save Bot Config</button>
+            <div style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
+              <p class="muted" style="margin-bottom:8px;">Manual premium activation (works even if key bot is offline).</p>
+              <div class="two-col grid">
+                <div>
+                  <label>Premium Key</label>
+                  <input id="manual-premium-key" type="text" placeholder="Enter premium key" />
+                </div>
+                <div>
+                  <label>Discord User ID</label>
+                  <input id="manual-premium-user-id" type="text" placeholder="Enter discord user id" />
+                </div>
+              </div>
+              <button id="manual-activate-premium" class="btn btn-primary" style="margin-top: 10px;">Manual Activate Premium</button>
+            </div>
+          </div>
+          <div data-subpanel="bot-ticket" style="display:none;">
+            <p class="muted" style="margin-bottom:12px;">Ticket bot connection for ticket embed commands.</p>
+            <div class="two-col grid">
+              <div style="grid-column:1 / -1;">
+                <label>Discord Application ID (Client ID)</label>
+                <input id="ticket-bot-app-id" type="text" placeholder="Paste ticket bot application/client id" value="<%= settings.ticketBot && settings.ticketBot.appId ? settings.ticketBot.appId : '' %>" />
+              </div>
+              <div style="grid-column:1 / -1;">
+                <label>Discord Bot Token</label>
+                <input id="ticket-bot-token" type="password" placeholder="Paste ticket bot token" value="<%= settings.ticketBot && settings.ticketBot.token ? settings.ticketBot.token : '' %>" />
+              </div>
+              <div style="grid-column:1 / -1;">
+                <label>Activation Token</label>
+                <div class="row" style="gap:8px;">
+                  <input id="ticket-bot-activation-token" readonly value="<%= settings.ticketBot && settings.ticketBot.activationToken ? settings.ticketBot.activationToken : '' %>" />
+                  <button id="ticket-bot-copy-activation-token" class="btn btn-ghost">Copy</button>
+                  <button id="ticket-bot-regenerate-activation-token" class="btn btn-ghost">Regenerate</button>
+                </div>
+              </div>
+            </div>
+            <button id="ticket-bot-save" class="btn btn-primary" style="margin-top: 12px;">Save Bot Config</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      const token = localStorage.getItem("jx_token");
+      const toast = (msg) => {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.classList.add("show");
+        setTimeout(() => el.classList.remove("show"), 2200);
+      };
+      if (!token) {
+        window.location.href = "/login";
+      }
+
+      let jxRole = "owner"; // "owner" or "guest"
+
+      async function loadSessionInfo() {
+        try {
+          const res = await fetch("/api/jx/auth/me", { headers: { Authorization: "Bearer " + token } });
+          if (!res.ok) {
+            throw new Error("Auth required");
+          }
+          const data = await res.json();
+          if (!data.ok) throw new Error("Auth failed");
+          jxRole = data.role || "owner";
+
+          if (jxRole === "guest") {
+            // Update title
+            const t = document.getElementById("dash-title");
+            if (t) t.textContent = "JX Guest Dashboard";
+
+            // Hide pending requests stat
+            const reqWrap = document.getElementById("stat-requests-wrap");
+            if (reqWrap) reqWrap.style.display = "none";
+
+            // Hide Request Key tab & panel
+            const tabReq = document.getElementById("tab-sub-request");
+            if (tabReq) tabReq.style.display = "none";
+            const panelReq = document.getElementById("subpanel-request");
+            if (panelReq) panelReq.style.display = "none";
+
+            // Hide Settings tab entirely
+            document.querySelectorAll(".tab[data-tab='tab-settings']").forEach((el) => {
+              el.style.display = "none";
+            });
+            document.querySelectorAll(".tab[data-tab='tab-bot']").forEach((el) => {
+              el.style.display = "none";
+            });
+            const settingsPanel = document.getElementById("tab-settings");
+            if (settingsPanel) settingsPanel.style.display = "none";
+            const botPanel = document.getElementById("tab-bot");
+            if (botPanel) botPanel.style.display = "none";
+          }
+        } catch (err) {
+          console.error(err);
+          window.location.href = "/login";
+        }
+      }
+
+      // Tabs
+      document.querySelectorAll(".tab").forEach((el) => {
+        el.addEventListener("click", () => {
+          const parentTabs = el.parentElement;
+          const isSub = parentTabs.dataset.subset === "true";
+          parentTabs.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+          el.classList.add("active");
+
+          if (parentTabs.parentElement.id === "tab-keys" || parentTabs.parentElement.id === "tab-giveaway" || parentTabs.parentElement.id === "tab-universal" || parentTabs.parentElement.id === "tab-bot") {
+            const sub = el.dataset.sub;
+            parentTabs.parentElement.querySelectorAll("[data-subpanel]").forEach((p) => (p.style.display = p.dataset.subpanel === sub ? "block" : "none"));
+          } else {
+            const tabId = el.dataset.tab;
+            ["tab-dashboard", "tab-keys", "tab-universal", "tab-giveaway", "tab-test", "tab-bot", "tab-settings"].forEach((id) => {
+              const panel = document.getElementById(id);
+              if (panel) panel.style.display = id === tabId ? "block" : "none";
+            });
+          }
+        });
+      });
+
+      // Stats
+      async function loadStats() {
+        try {
+          const res = await fetch("/api/jx/dashboard/metrics", { headers: { Authorization: "Bearer " + token } });
+          const data = await res.json();
+          if (data.ok) {
+            document.getElementById("stat-total").textContent = data.stats.totalGenerated;
+            document.getElementById("stat-active").textContent = data.stats.activeKeys;
+            document.getElementById("stat-requests").textContent = data.stats.requestCount;
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // Requests
+      document.getElementById("req-btn").onclick = async () => {
+        const hwid = document.getElementById("req-hwid").value.trim();
+        if (!hwid) return toast("Enter HWID");
+        try {
+          const res = await fetch("/api/jx/keys/request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ hwid }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          toast(data.checkpointUrl ? "Checkpoint link generated." : "Request created.");
+          loadStats();
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+
+      // Keys list
+      const state = {
+        allKeys: [],
+      };
+
+      function applyKeySearch() {
+        const tbody = document.querySelector("#keys-table tbody");
+        const query = (document.getElementById("key-search").value || "").trim().toLowerCase();
+        tbody.innerHTML = "";
+        const rows = !query
+          ? state.allKeys
+          : state.allKeys.filter((k) => {
+              const keyStr = String(k.key || "").toLowerCase();
+              const hwidStr = String(k.hwid || "").toLowerCase();
+              const tierStr = String(k.tier || "").toLowerCase();
+              const statusStr = String(k.status || "").toLowerCase();
+              return (
+                keyStr.includes(query) ||
+                hwidStr.includes(query) ||
+                tierStr.includes(query) ||
+                statusStr.includes(query)
+              );
+            });
+        rows.forEach((k) => {
+          const tr = document.createElement("tr");
+          const exp = k.expiresAt ? new Date(k.expiresAt).toLocaleString() : "lifetime";
+          tr.innerHTML = `
+              <td><span class="code">${k.key}</span></td>
+              <td>${k.hwid || ""}</td>
+              <td><span class="pill ${k.tier === "premium" ? "success" : ""}">${k.tier}</span></td>
+              <td>${exp}</td>
+              <td><span class="pill ${k.status === "active" ? "success" : "danger"}">${k.status}</span></td>
+              <td class="row" style="gap:6px;">
+                <button class="btn btn-ghost" data-act="reset-hwid" data-key="${k.key}">Reset-HWID</button>
+                <button class="btn btn-ghost" data-act="delete" data-key="${k.key}">Delete</button>
+              </td>
+            `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      async function loadKeys() {
+        const filter = document.getElementById("filter").value;
+        try {
+          const res = await fetch("/api/jx/keys?filter=" + encodeURIComponent(filter), {
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          state.allKeys = Array.isArray(data.keys) ? data.keys : [];
+          applyKeySearch();
+        } catch (err) {
+          toast(err.message);
+        }
+      }
+      async function deleteKey(key) {
+        try {
+          const res = await fetch("/api/jx/keys/" + encodeURIComponent(key), {
+            method: "DELETE",
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error("Delete failed");
+          toast("Deleted");
+          loadKeys();
+          loadUnused();
+          loadStats();
+        } catch (err) {
+          toast(err.message);
+        }
+      }
+      async function adminResetHwid(key) {
+        try {
+          const res = await fetch("/api/jx/keys/" + encodeURIComponent(key) + "/admin-unbind", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Reset failed");
+          toast("HWID unbound");
+          loadKeys();
+          loadUnused();
+          loadGiveaways();
+          loadGiveawaysUnused();
+          loadUniv();
+        } catch (err) {
+          toast(err.message);
+        }
+      }
+      // Unused list
+      async function loadUnused() {
+        try {
+          const res = await fetch("/api/jx/keys?filter=unused", {
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          const tbody = document.querySelector("#unused-table tbody");
+          tbody.innerHTML = "";
+          data.keys.forEach((k) => {
+            const tr = document.createElement("tr");
+            const exp = k.expiresAt ? new Date(k.expiresAt).toLocaleString() : "lifetime";
+            tr.innerHTML = `
+              <td><span class="code">${k.key}</span></td>
+              <td>${k.hwid || "unbound"}</td>
+              <td>${k.tier}</td>
+              <td>${exp}</td>
+              <td><span class="pill ${k.status === "active" ? "success" : "danger"}">${k.status}</span></td>
+              <td>
+                <button class="btn btn-ghost" data-copy="${k.key}">Copy</button>
+                <button class="btn btn-ghost danger" data-del="${k.key}">Delete</button>
+              </td>
+            `;
+            tr.querySelector("[data-copy]").onclick = () => navigator.clipboard.writeText(k.key).then(() => toast("Copied"));
+            tr.querySelector("[data-del]").onclick = () => deleteKey(k.key);
+            tbody.appendChild(tr);
+          });
+        } catch (err) {
+          toast(err.message);
+        }
+      }
+      document.getElementById("refresh").onclick = loadKeys;
+      document.getElementById("refresh-unused").onclick = loadUnused;
+
+      // --- Giveaway Keys ---
+      async function loadGiveaways() {
+        try {
+          const res = await fetch("/api/jx/keys?filter=giveaway", {
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          const tbody = document.querySelector("#giveaway-table tbody");
+          tbody.innerHTML = "";
+          data.keys.forEach((k) => {
+            const tr = document.createElement("tr");
+            const exp = k.expiresAt ? new Date(k.expiresAt).toLocaleString() : "lifetime";
+            tr.innerHTML = `
+              <td><span class="code">${k.key}</span></td>
+              <td>${k.hwid || "unbound"}</td>
+              <td>${exp}</td>
+              <td><span class="pill ${k.status === "active" ? "success" : "danger"}">${k.status}</span></td>
+              <td>
+                <button class="btn btn-ghost" data-copy="${k.key}">Copy</button>
+                <button class="btn btn-ghost danger" data-del="${k.key}">Delete</button>
+              </td>
+            `;
+            tr.querySelector("[data-copy]").onclick = () => navigator.clipboard.writeText(k.key).then(() => toast("Copied"));
+            tr.querySelector("[data-del]").onclick = () => deleteKey(k.key);
+            tbody.appendChild(tr);
+          });
+        } catch (err) {
+          toast(err.message);
+        }
+      }
+      document.getElementById("refresh-giveaway").onclick = loadGiveaways;
+
+      async function loadGiveawaysUnused() {
+        try {
+          const res = await fetch("/api/jx/keys?filter=unused-giveaway", {
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          const tbody = document.querySelector("#giveaway-unused-table tbody");
+          tbody.innerHTML = "";
+          data.keys.forEach((k) => {
+            const tr = document.createElement("tr");
+            const exp = k.expiresAt ? new Date(k.expiresAt).toLocaleString() : "lifetime";
+            tr.innerHTML = `
+              <td><span class="code">${k.key}</span></td>
+              <td>${k.hwid || "unbound"}</td>
+              <td>${exp}</td>
+              <td><span class="pill ${k.status === "active" ? "success" : "danger"}">${k.status}</span></td>
+              <td>
+                <button class="btn btn-ghost" data-copy="${k.key}">Copy</button>
+                <button class="btn btn-ghost danger" data-del="${k.key}">Delete</button>
+              </td>
+            `;
+            tr.querySelector("[data-copy]").onclick = () => navigator.clipboard.writeText(k.key).then(() => toast("Copied"));
+            tr.querySelector("[data-del]").onclick = () => deleteKey(k.key);
+            tbody.appendChild(tr);
+          });
+        } catch (err) {
+          toast(err.message);
+        }
+      }
+      document.getElementById("refresh-giveaway-unused").onclick = loadGiveawaysUnused;
+
+      // --- Universal Keys ---
+      async function loadUniv() {
+        try {
+          const res = await fetch("/api/jx/keys?filter=universal", {
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          const tbody = document.querySelector("#univ-table tbody");
+          tbody.innerHTML = "";
+          data.keys.forEach((k) => {
+            const tr = document.createElement("tr");
+            const exp = k.expiresAt ? new Date(k.expiresAt).toLocaleString() : "lifetime";
+            tr.innerHTML = `
+              <td><span class="code">${k.key}</span></td>
+              <td>${k.tier}</td>
+              <td>${exp}</td>
+              <td><span class="pill ${k.status === "active" ? "success" : "danger"}">${k.status}</span></td>
+              <td>
+                <button class="btn btn-ghost" data-copy="${k.key}">Copy</button>
+                <button class="btn btn-ghost danger" data-del="${k.key}">Delete</button>
+              </td>
+            `;
+            tr.querySelector("[data-copy]").onclick = () => navigator.clipboard.writeText(k.key).then(() => toast("Copied"));
+            tr.querySelector("[data-del]").onclick = () => deleteKey(k.key);
+            tbody.appendChild(tr);
+          });
+        } catch (err) {
+          toast(err.message);
+        }
+      }
+      document.getElementById("refresh-univ").onclick = loadUniv;
+
+      // Add Export logic
+      document.getElementById("master-export-keys").onclick = () => exportKeys("all");
+      document.getElementById("export-keys").onclick = () => exportKeys("all");
+      document.getElementById("export-giveaway").onclick = () => exportKeys("giveaway");
+      document.getElementById("export-giveaway-unused").onclick = () => exportKeys("unused-giveaway");
+
+      async function exportKeys(filterStr) {
+        try {
+          const res = await fetch("/api/jx/keys/export", {
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error("Failed to export");
+          let keysToExport = data.keys;
+          if (filterStr === "giveaway") {
+             keysToExport = keysToExport.filter(k => k.tier === "giveaway");
+          }
+          const payload =
+            filterStr === "all"
+              ? data
+              : { keys: keysToExport, requests: data.requests || [], settings: data.settings || {}, stats: data.stats || {} };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `jx_keys_${filterStr}_backup_${new Date().toISOString().split('T')[0]}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast("Exported!");
+        } catch (err) {
+          toast(err.message);
+        }
+      }
+
+      // Add Import logic
+      function setupImport(btnId, fileInputId) {
+        const btn = document.getElementById(btnId);
+        const fileInput = document.getElementById(fileInputId);
+        btn.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+            try {
+              const payload = JSON.parse(event.target.result);
+              const res = await fetch("/api/jx/keys/import", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                body: JSON.stringify(payload)
+              });
+              const data = await res.json();
+              if (!data.ok) throw new Error(data.message || "Failed to import");
+              toast(`Imported ${data.count} keys successfully!`);
+              loadKeys();
+              loadUnused();
+              loadGiveaways();
+              loadStats();
+            } catch (err) {
+              toast("Import error: " + err.message);
+            }
+            fileInput.value = "";
+          };
+          reader.readAsText(file);
+        };
+      }
+      setupImport("master-import-keys", "master-import-keys-file");
+      setupImport("import-keys", "import-keys-file");
+      setupImport("import-giveaway", "import-giveaway-file");
+      setupImport("import-giveaway-unused", "import-giveaway-unused-file");
+      const searchInput = document.getElementById("key-search");
+      if (searchInput) {
+        searchInput.addEventListener("input", () => {
+          applyKeySearch();
+        });
+      }
+
+      document.querySelector("#keys-table tbody").onclick = async (e) => {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+        const key = btn.dataset.key;
+        if (btn.dataset.act === "delete") {
+          deleteKey(key);
+        } else if (btn.dataset.act === "reset-hwid") {
+          adminResetHwid(key);
+        }
+      };
+
+      // Generate
+      document.querySelectorAll(".exp").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          document.getElementById("gen-hours").value = btn.dataset.hours;
+        })
+      );
+      document.getElementById("gen-btn").onclick = async () => {
+        const hwid = document.getElementById("gen-hwid").value.trim();
+        const tier = document.getElementById("gen-tier").value;
+        const hours = document.getElementById("gen-hours").value.trim() || undefined;
+        try {
+          const res = await fetch("/api/jx/keys/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ hwid, tier, hours }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          toast("Generated " + data.key);
+          loadKeys();
+          loadStats();
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+
+      // Giveaway Generate
+      document.getElementById("gen-giveaway-btn").onclick = async () => {
+        const hours = document.getElementById("gen-giveaway-hours").value.trim() || undefined;
+        try {
+          const res = await fetch("/api/jx/keys/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ hwid: "", tier: "giveaway", hours }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          toast("Generated Giveaway Key: " + data.key);
+          loadGiveaways();
+          loadGiveawaysUnused();
+          loadStats();
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+
+      // Universal Generate
+      document.getElementById("gen-univ-btn").onclick = async () => {
+        const hours = document.getElementById("gen-univ-hours").value.trim() || undefined;
+        try {
+          const res = await fetch("/api/jx/keys/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ hwid: "unbound-hwid", tier: "universal", hours }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          toast("Generated Universal Key: " + data.key);
+          loadUniv();
+          loadStats();
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+
+      // Settings
+      document.getElementById("save-settings").onclick = async () => {
+        const prefix = document.getElementById("set-prefix").value.trim();
+        const checkpoints = document.getElementById("set-checkpoints").value;
+        const expirationHours = document.getElementById("set-exp").value;
+        const generateLimit = document.getElementById("set-generate-limit").value;
+        const addTimeHours = document.getElementById("set-add-time-hours").value;
+        const startCooldownMinutes = document.getElementById("set-start-cooldown-mins").value;
+        const plusTimeCooldownHours = document.getElementById("set-plus-time-cooldown-hours").value;
+        const plusTimeUsesBeforeCooldown = document.getElementById("set-plus-time-uses").value;
+        const testKeyHours = document.getElementById("set-test-key-hours").value;
+        const tokenLimit = document.getElementById("set-token-limit").value;
+        const tokenLimitGenerateKey = document.getElementById("set-token-limit-generate").value;
+        const tokenLimitExtendKey = document.getElementById("set-token-limit-extend").value;
+        const tokenLimitToBuy = document.getElementById("set-token-limit-buy").value;
+        const keyless = document.getElementById("set-keyless").checked;
+        const guestEnabled = document.getElementById("set-guest-enabled").checked;
+        const antiBypass = document.getElementById("set-anti-bypass").checked;
+        const antiExtension = document.getElementById("set-anti-extension").checked;
+        const bindPremiumKey = document.getElementById("set-bind-premium-key").checked;
+        const boostEnabled = document.getElementById("set-boost-enabled").checked;
+        const boostLike = document.getElementById("set-boost-like").value.trim();
+        const boostSubscribe = document.getElementById("set-boost-subscribe").value.trim();
+        const boostDiscord = document.getElementById("set-boost-discord").value.trim();
+        const tutorialEnabled = document.getElementById("set-tutorial-enabled").checked;
+        const tutorialUrl = document.getElementById("set-tutorial-url").value.trim();
+        try {
+          const res = await fetch("/api/jx/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({
+              prefix,
+              checkpoints,
+              generateLimit,
+              addTimeHours,
+              startCooldownMinutes,
+              plusTimeCooldownHours,
+              plusTimeUsesBeforeCooldown,
+              testKeyHours,
+              expirationHours,
+              tokenLimit,
+              tokenLimitGenerateKey,
+              tokenLimitExtendKey,
+              tokenLimitToBuy,
+              keyless,
+              guestEnabled,
+              antiBypass,
+              antiExtension,
+              bindPremiumKey,
+              boostMode: {
+                enabled: boostEnabled,
+                likeUrl: boostLike,
+                subscribeUrl: boostSubscribe,
+                discordUrl: boostDiscord,
+              },
+              tutorial: {
+                enabled: tutorialEnabled,
+                url: tutorialUrl,
+              },
+            }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error("Failed to save");
+          toast("Saved");
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+
+      document.getElementById("bot-copy-activation-token").onclick = async () => {
+        const v = document.getElementById("bot-activation-token").value.trim();
+        if (!v) return toast("No token");
+        await navigator.clipboard.writeText(v);
+        toast("Copied activation token");
+      };
+
+      document.getElementById("bot-regenerate-activation-token").onclick = async () => {
+        if (!confirm("Are you sure you want to regenerate your activation token?")) return;
+        try {
+          const res = await fetch("/api/jx/bot/regenerate-activation", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          document.getElementById("bot-activation-token").value = data.activationToken || "";
+          toast("Activation token regenerated");
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+
+      document.getElementById("bot-save").onclick = async () => {
+        const botAppId = document.getElementById("bot-app-id").value.trim();
+        const botToken = document.getElementById("bot-token").value.trim();
+        const activationToken = document.getElementById("bot-activation-token").value.trim();
+        try {
+          const res = await fetch("/api/jx/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({
+              bot: {
+                appId: botAppId,
+                token: botToken,
+                activationToken,
+              },
+            }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed to save bot config");
+          document.getElementById("bot-activation-token").value = data.settings?.bot?.activationToken || activationToken;
+          toast("Bot config saved");
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+
+      document.getElementById("manual-activate-premium").onclick = async () => {
+        const key = document.getElementById("manual-premium-key").value.trim();
+        const userId = document.getElementById("manual-premium-user-id").value.trim();
+        if (!key || !userId) return toast("Enter premium key and user id");
+        try {
+          const res = await fetch("/api/jx/keys/manual-activate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ key, userId }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Manual activation failed");
+          toast(`Activated ${data.key} for user ${data.userId}`);
+          document.getElementById("manual-premium-key").value = "";
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+
+      document.getElementById("ticket-bot-copy-activation-token").onclick = async () => {
+        const v = document.getElementById("ticket-bot-activation-token").value.trim();
+        if (!v) return toast("No token");
+        await navigator.clipboard.writeText(v);
+        toast("Copied activation token");
+      };
+
+      document.getElementById("ticket-bot-regenerate-activation-token").onclick = async () => {
+        if (!confirm("Are you sure you want to regenerate your activation token?")) return;
+        try {
+          const res = await fetch("/api/jx/ticket-bot/regenerate-activation", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          document.getElementById("ticket-bot-activation-token").value = data.activationToken || "";
+          toast("Activation token regenerated");
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+
+      document.getElementById("ticket-bot-save").onclick = async () => {
+        const appId = document.getElementById("ticket-bot-app-id").value.trim();
+        const tokenValue = document.getElementById("ticket-bot-token").value.trim();
+        const activationToken = document.getElementById("ticket-bot-activation-token").value.trim();
+        try {
+          const res = await fetch("/api/jx/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({
+              ticketBot: {
+                appId,
+                token: tokenValue,
+                activationToken,
+              },
+            }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed to save ticket bot config");
+          document.getElementById("ticket-bot-activation-token").value = data.settings?.ticketBot?.activationToken || activationToken;
+          toast("Ticket bot config saved");
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+
+      // Auth guard
+      document.getElementById("logout").onclick = () => {
+        localStorage.removeItem("jx_token");
+        window.location.href = "/login";
+      };
+
+      document.getElementById("gen-test-checkpoint").onclick = async () => {
+        try {
+          const res = await fetch("/api/jx/test/generate-checkpoint", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token },
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Failed");
+          document.getElementById("test-checkpoint-url").value = data.checkpointUrl || "";
+          document.getElementById("test-hwid").value = data.hwid || "";
+          toast("Test checkpoint generated");
+        } catch (err) {
+          toast(err.message);
+        }
+      };
+      document.getElementById("copy-test-checkpoint-url").onclick = async () => {
+        const url = document.getElementById("test-checkpoint-url").value.trim();
+        if (!url) return toast("No URL");
+        await navigator.clipboard.writeText(url);
+        toast("Copied test URL");
+      };
+
+      // Init
+      (async () => {
+        await loadSessionInfo();
+        loadStats();
+        loadKeys();
+        loadUnused();
+        loadGiveaways();
+        loadGiveawaysUnused();
+        loadUniv();
+      })();
+    </script>
+  </body>
+</html>

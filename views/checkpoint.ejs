@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkpoint</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#65527b,#25345f);color:#e6ecff;min-height:100vh}
+    .wrap{max-width:980px;margin:110px auto;padding:0 16px}
+    .panel{background:rgba(20,28,60,.9);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+    .top{display:flex;gap:14px;align-items:center;padding:18px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .bar{height:8px;background:#0c1432;border-radius:999px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,#42d37b,#2f9f57)}
+    .btn{border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}.btn-main{background:#56d768;color:#082b16}.btn-main[disabled]{opacity:.45;cursor:not-allowed}
+    .btn-mini{padding:7px 10px;font-size:12px;border-radius:7px}
+    .btn-del{background:#ef4444;color:#fff}
+    .body{padding:14px 18px}.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .service-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px}
+    .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.scard{border:1px solid rgba(255,255,255,.25);padding:10px;border-radius:8px;text-align:center;cursor:pointer}
+    .scard.active{border-color:#64dd83;background:rgba(100,221,131,.15)}
+    table{width:100%;border-collapse:collapse;font-size:12px} th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}
+    .dim{opacity:.45;pointer-events:none}.toast{position:fixed;right:16px;top:16px;background:#3dd36a;color:#083018;padding:8px 12px;border-radius:8px;display:none}
+    .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,22,.88);z-index:20}
+    .card{width:min(430px,92vw);background:#101938;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;text-align:center}
+    .loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b1022;z-index:30}.loader img{width:86px;height:86px;border-radius:50%}
+    .selector-only{max-width:460px}
+    .btn-lock{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    .btn-lock svg{width:16px;height:16px;opacity:.45}
+    .float-reset{position:fixed;right:18px;bottom:18px;z-index:25}
+    .float-reset a{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#1d4ed8;color:#fff;text-decoration:none;font-weight:700;box-shadow:0 10px 26px rgba(29,78,216,.35)}
+    @media(max-width:700px){.float-reset{right:12px;bottom:12px}.float-reset a{padding:9px 12px;font-size:12px}}
+  </style>
+</head>
+<body>
+  <div id="loader" class="loader"><img src="/logo.png" alt="logo"></div>
+  <div id="toast" class="toast">Copied</div>
+  <div id="firstCaptcha" class="overlay"><div class="card"><h3>Verify First</h3><div class="h-captcha" data-sitekey="6b8ab476-90dc-44f4-9c92-c78c90e422c0" data-callback="onFirstCaptcha"></div></div></div>
+  <div id="startCaptcha" class="overlay"><div class="card"><h3>Solve Captcha to Continue</h3><div class="h-captcha" data-sitekey="6b8ab476-90dc-44f4-9c92-c78c90e422c0" data-callback="onStartCaptcha"></div></div></div>
+  <div id="deleteConfirm" class="overlay"><div class="card"><h3>Are You Sure You Want To Delete Your Key?</h3><div style="display:flex;gap:10px;justify-content:center;margin-top:12px;"><button id="deleteYes" class="btn btn-main">Yes</button><button id="deleteNo" class="btn">No</button></div></div></div>
+
+  <div id="boostOverlay" class="overlay">
+    <div class="card" style="width:min(520px,92vw);text-align:left;">
+      <h3 style="margin:0 0 6px;">Task</h3>
+      <p style="margin:0 0 12px;color:#cbd5e1;font-size:13px;line-height:1.45;">
+        Please complete the tasks below before continuing.
+      </p>
+      <div id="boostLinks" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <p id="boostHint" style="margin:10px 0 0;color:#94a3b8;font-size:12px;">Finish all tasks to close this screen.</p>
+    </div>
+  </div>
+
+  <div class="wrap" id="wrap"
+    data-hwid="<%= hwid %>"
+    data-rid="<%= rid %>"
+    data-base="<%= baseUrl %>"
+    data-cp="<%= checkpoint %>"
+    data-max="<%= maxCheckpoint %>"
+    data-service="<%= service %>"
+    data-keyless="<%= settings.keyless ? '1' : '0' %>"
+    data-generate-limit="<%= settings.generateLimit || 3 %>"
+    data-boost-enabled="<%= settings.boostMode && settings.boostMode.enabled ? '1' : '0' %>"
+    data-boost-like="<%= (settings.boostMode && settings.boostMode.likeUrl) || '' %>"
+    data-boost-subscribe="<%= (settings.boostMode && settings.boostMode.subscribeUrl) || '' %>"
+    data-boost-discord="<%= (settings.boostMode && settings.boostMode.discordUrl) || '' %>"
+    data-tutorial-enabled="<%= settings.tutorial && settings.tutorial.enabled ? '1' : '0' %>"
+    data-tutorial-url="<%= (settings.tutorial && settings.tutorial.url) || '' %>"
+  >
+    <div id="keylessCard" class="card" style="display:none;margin:auto;">
+      <h2 style="margin:0 0 8px;">Keyless Mode</h2>
+      <p style="color:#a8b8ef">No checkpoint required. Active key:</p>
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <input value="JX_KEYLESS" readonly style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0b132f;color:#fff;width:230px;">
+        <button id="copyKeyless" class="btn btn-main">Copy</button>
+      </div>
+    </div>
+
+    <div id="serviceSelector" class="panel selector-only" style="display:none;margin:auto;">
+      <div class="body">
+        <h3 style="margin:0 0 10px;">Select a service</h3>
+        <div class="sgrid">
+          <div class="scard" data-service="linkvertise">LinkVertise</div>
+          <div class="scard" data-service="lootlabs">LootLabs</div>
+        </div>
+        <div class="row" style="margin-top:10px;"><span id="selServiceText">Service: None</span><button id="selectorContinue" class="btn btn-main" disabled>Continue</button></div>
+      </div>
+    </div>
+
+    <div id="mainPanel" class="panel" style="display:none;">
+      <div class="top">
+        <strong>Key Reward</strong>
+        <div style="flex:1"><small id="progressText"></small><div class="bar"><div id="progressFill" class="fill"></div></div></div>
+        <button id="startBtn" class="btn btn-main">START</button>
+      </div>
+      <div class="body">
+        <div class="row" style="margin-bottom:10px;">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <strong id="tokenText" style="font-size:13px;">Token: 0</strong>
+            <button id="buyTokenBtn" class="btn btn-main btn-mini">Buy Token</button>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:8px;"><span id="serviceLabel">Service: Linkvertise</span><button id="switchBtn" class="btn">Switch Service</button></div>
+        <table><thead><tr><th>YOUR KEYS</th><th>TIME LEFT</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody id="localKeysBody"><tr><td colspan="4">No keys saved in this browser.</td></tr></tbody></table>
+        <div id="tutorialWrap" style="display:none;margin-top:14px;justify-content:center;">
+          <div style="width:min(560px,100%);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+              <strong style="font-size:14px;">Tutorial Video</strong>
+              <a id="tutorialLink" href="#" target="_blank" rel="noopener noreferrer" style="color:#93c5fd;font-weight:700;text-decoration:none;">Open link</a>
+            </div>
+            <div id="tutorialPlayer" style="width:100%;aspect-ratio:16/9;max-height:320px;border-radius:10px;overflow:hidden;background:#050819;display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:13px;">
+              Loading...
+            </div>
+          </div>
+        </div>
+        <div id="generateNewWrap" style="display:none;justify-content:center;margin-top:12px;">
+          <button id="generateNewKeyBtn" class="btn btn-main">+ Generate A New Key</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="float-reset">
+    <a href="https://getjx.onrender.com/key/reset-hwid" target="_blank" rel="noopener noreferrer">Reset-HWID</a>
+  </div>
+
+  <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+  <script>
+    const __loaderEl = document.getElementById("loader");
+    function __hideLoader() {
+      try {
+        if (!__loaderEl) return;
+        __loaderEl.style.opacity = "0";
+        __loaderEl.style.pointerEvents = "none";
+        setTimeout(() => {
+          try { __loaderEl.style.display = "none"; } catch (e) {}
+        }, 400);
+      } catch (e) {}
+    }
+    // Failsafe: never get stuck on loading due to runtime errors/extensions
+    window.addEventListener("error", __hideLoader);
+    window.addEventListener("unhandledrejection", __hideLoader);
+    setTimeout(__hideLoader, 1800);
+
+    const box = document.getElementById("wrap");
+    const hwid = box.dataset.hwid, rid = box.dataset.rid, cp = Number(box.dataset.cp||"0"), maxCp = Number(box.dataset.max||"1"), keyless = box.dataset.keyless==="1";
+    const generateLimit = Math.max(1, Number(box.dataset.generateLimit || "3"));
+    const base = (box.dataset.base||"").replace(/\/+$/,"");
+    const startCooldownMinutes = Number("<%= settings.startCooldownMinutes || 5 %>");
+    const addTimeHours = Number("<%= settings.addTimeHours || 12 %>");
+    const plusTimeCooldownHours = Number("<%= settings.plusTimeCooldownHours || 12 %>");
+    const plusTimeUsesBeforeCooldown = Number("<%= settings.plusTimeUsesBeforeCooldown || 2 %>");
+    const humanKey="__jx_human_once_v1", progressKey="__jx_progress_completed_"+hwid.replace(/[^a-zA-Z0-9_-]/g,""), cdPrefix="__jx_extend_cd_";
+    const completedFlag = new URLSearchParams(location.search).get("completed")==="1";
+    const startCooldownKey = "__jx_start_cd_" + hwid.replace(/[^a-zA-Z0-9_-]/g,"");
+    const boostEnabled = box.dataset.boostEnabled === "1";
+    const boostLike = (box.dataset.boostLike || "").trim();
+    const boostSubscribe = (box.dataset.boostSubscribe || "").trim();
+    const boostDiscord = (box.dataset.boostDiscord || "").trim();
+    const tutorialEnabled = box.dataset.tutorialEnabled === "1";
+    const tutorialUrl = (box.dataset.tutorialUrl || "").trim();
+    const servicePrefKey = "__jx_service_pref_" + hwid.replace(/[^a-zA-Z0-9_-]/g,"");
+    const tokenTextEl = document.getElementById("tokenText");
+    const buyTokenBtn = document.getElementById("buyTokenBtn");
+    const costGen = Number("<%= typeof settings.tokenLimitGenerateKey !== 'undefined' ? settings.tokenLimitGenerateKey : 3 %>");
+    const costExtend = Number("<%= typeof settings.tokenLimitExtendKey !== 'undefined' ? settings.tokenLimitExtendKey : 3 %>");
+    const buyReward = Number("<%= typeof settings.tokenLimitToBuy !== 'undefined' ? settings.tokenLimitToBuy : 9 %>");
+    const buyTokenCap = Number("<%= typeof settings.tokenLimit !== 'undefined' ? settings.tokenLimit : 3 %>");
+    let currentTokens = 0;
+
+    async function refreshTokens(){
+      try{
+        const r = await fetch(`/api/jx/tokens/balance?hwid=${encodeURIComponent(hwid)}`);
+        const d = await r.json();
+        if(d && d.ok){
+          currentTokens = Number(d.tokens || 0);
+        }
+      }catch(e){}
+      if(tokenTextEl) tokenTextEl.textContent = `Token: ${Math.max(0, Math.floor(currentTokens||0))}`;
+    }
+
+    function setBuyTokenLock(){
+      if(!buyTokenBtn) return;
+      const done = localStorage.getItem(progressKey)==="1";
+      if(!done){
+        buyTokenBtn.disabled = true;
+        buyTokenBtn.classList.add("btn-lock");
+        buyTokenBtn.innerHTML = lockSvg() + "Buy Token";
+        return;
+      }
+      if(currentTokens >= Math.max(1, buyTokenCap||3)){
+        buyTokenBtn.disabled = true;
+        buyTokenBtn.classList.remove("btn-lock");
+        buyTokenBtn.textContent = `Token Full (${Math.max(1, buyTokenCap||3)})`;
+        return;
+      }
+      buyTokenBtn.disabled = false;
+      buyTokenBtn.classList.remove("btn-lock");
+      buyTokenBtn.textContent = `Buy Token (+${Math.max(1, buyReward||9)})`;
+    }
+    function readServicePref(){
+      try{
+        const raw = localStorage.getItem(servicePrefKey);
+        if (raw === "lootlabs" || raw === "linkvertise") return raw;
+      }catch(e){}
+      return null;
+    }
+    function saveServicePref(s){
+      try{
+        if (s === "lootlabs" || s === "linkvertise") localStorage.setItem(servicePrefKey, s);
+      }catch(e){}
+    }
+    let service = null;
+    if (cp !== 0) {
+      const rawService = String(box.dataset.service || readServicePref() || "linkvertise").toLowerCase();
+      service = rawService === "lootlabs" ? "lootlabs" : "linkvertise";
+    }
+    function showToast(t){const el=document.getElementById("toast");el.textContent=t;el.style.display="block";setTimeout(()=>el.style.display="none",1200)}
+    function humanDone(){try{const x=JSON.parse(localStorage.getItem(humanKey)||"{}");return x.ok&&x.exp>Date.now()}catch(e){return false}}
+    function setHuman(){localStorage.setItem(humanKey,JSON.stringify({ok:true,exp:Date.now()+365*24*3600*1000}))}
+    function fmtMs(ms){if(ms<=0)return"Expired";const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);return h+"h "+String(m).padStart(2,"0")+"m";}
+    function fmtCd(ms){if(ms<=0)return"START";const mm=Math.floor(ms/60000),ss=Math.floor((ms%60000)/1000);return `${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;}
+    function fmtCdLong(ms){
+      const total = Math.max(0, Math.floor(ms/1000));
+      const h = Math.floor(total/3600);
+      const m = Math.floor((total%3600)/60);
+      const s = total%60;
+      if(h>0) return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+      return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    }
+    function setProgressDisplay(done,total){
+      const d=Math.max(0,Number(done||0)),t=Math.max(1,Number(total||1));
+      const txt=document.getElementById("progressText"),fill=document.getElementById("progressFill");
+      if(txt) txt.textContent=`Progress: ${d}/${t}`;
+      if(fill) fill.style.width=`${Math.min(100,Math.round((d/t)*100))}%`;
+    }
+    function lockSvg(){
+      return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17 8h-1V6a4 4 0 10-8 0v2H7a2 2 0 00-2 2v9a2 2 0 002 2h10a2 2 0 002-2v-9a2 2 0 00-2-2zm-7-2a2 2 0 114 0v2h-4V6z"/></svg>';
+    }
+    function selectUI(){
+      document.querySelectorAll(".scard").forEach(x=>{
+        x.classList.toggle("active", service && x.dataset.service===service);
+        x.onclick=()=>{service=x.dataset.service;selectUI();};
+      });
+      const txt = document.getElementById("selServiceText");
+      const btn = document.getElementById("selectorContinue");
+      if (!service) {
+        if (txt) txt.textContent = "Service: None";
+        if (btn) btn.disabled = true;
+        return;
+      }
+      if (txt) txt.textContent = "Service: " + service.charAt(0).toUpperCase()+service.slice(1);
+      if (btn) btn.disabled = false;
+    }
+    let deleteTargetKey = "";
+    let serverStartUntil = 0;
+    async function renderKeys(){
+      const body=document.getElementById("localKeysBody"); if(!body) return; let rows=[]; const now=Date.now();
+      const done = localStorage.getItem(progressKey)==="1";
+      const genWrap = document.getElementById("generateNewWrap");
+      try{
+        const rr = await fetch(`${base}/api/jx/keys/list-for-hwid?hwid=${encodeURIComponent(hwid)}`);
+        const dd = await rr.json();
+        if(dd && dd.ok && Array.isArray(dd.keys)) rows = dd.keys.filter(x => x && x.key && x.key !== "JX_KEYLESS");
+      }catch(e){}
+      if(!rows.length){
+        body.innerHTML='<tr><td colspan="4">No keys saved</td></tr>';
+        if(genWrap) genWrap.style.display = (!keyless && (0 < generateLimit)) ? "flex" : "none";
+        const genBtn = document.getElementById("generateNewKeyBtn");
+        if(genBtn){
+          const enough = currentTokens >= Math.max(0, costGen||0);
+          genBtn.classList.toggle("dim", !enough);
+          genBtn.textContent = `+ Generate A New Key (-${Math.max(0, costGen||0)} Token)`;
+        }
+        return;
+      }
+      const freeCount = rows.filter(r => String(r.tier || "").toLowerCase() === "free").length;
+      body.innerHTML=rows.map(r=>{
+        const diff=r.expiresAt?(r.expiresAt-Date.now()):null;
+        const cdUntil = Number(localStorage.getItem(cdPrefix+r.key)||0);
+        const cd=Math.max(0,cdUntil-Date.now());
+        const used = Number(localStorage.getItem("__jx_plus_use_" + r.key) || 0);
+        const canUseMore = used < plusTimeUsesBeforeCooldown;
+        const enoughTok = currentTokens >= Math.max(0, costExtend||0);
+        const locked = (!enoughTok) || (!canUseMore && cd>0);
+        const extLabel = !enoughTok ? `Need ${Math.max(0, costExtend||0)}` : (canUseMore ? ("+"+addTimeHours+"h") : (cd>0 ? fmtCdLong(cd) : ("+"+addTimeHours+"h")));
+        const extInner = (!enoughTok || (!canUseMore && cd>0)) ? (lockSvg() + extLabel) : extLabel;
+        return `<tr><td>${r.key}</td><td>${diff===null?"Lifetime":fmtMs(diff)}</td><td>${diff===null||diff>0?"Active":"Expired"}</td><td><button data-copy="${r.key}" class="btn btn-mini">Copy</button> <button data-ext="${r.key}" data-cd-until="${cdUntil||0}" data-can-more="${canUseMore?1:0}" class="btn btn-mini ${locked?"dim":""} ${(!enoughTok || (done && !canUseMore && cd>0)) ? "btn-lock" : ""}">${extInner}</button> <button data-del="${r.key}" class="btn btn-del btn-mini">Delete</button></td></tr>`
+      }).join("");
+      body.querySelectorAll("[data-copy]").forEach(b=>b.onclick=async()=>{await navigator.clipboard.writeText(b.dataset.copy);b.textContent="Copied";b.style.background="#3dd36a";showToast("Copied");setTimeout(()=>{b.textContent="Copy";b.style.background="";},1200);});
+      body.querySelectorAll("[data-ext]").forEach(b=>b.onclick=async()=>{
+        if(b.classList.contains("dim")) return;
+        const key=b.dataset.ext;
+        const r=await fetch("/api/jx/keys/extend-own",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({hwid,key})});
+        const d=await r.json();
+        if(!d.ok){
+          if(Number(d.remainingMs||0)>0) localStorage.setItem(cdPrefix+key,String(Date.now()+Number(d.remainingMs||plusTimeCooldownHours*3600000)));
+          showToast(d.message||"Failed");
+          await refreshTokens();
+          setBuyTokenLock();
+          renderKeys();
+          return;
+        }
+        localStorage.setItem("__jx_plus_use_" + key, String(Number(d.uses || 0)));
+        if(d.cooldownStarted){ localStorage.setItem(cdPrefix+key,String(Date.now()+Number(d.cooldownMs || plusTimeCooldownHours*3600000))); }
+        localStorage.setItem(startCooldownKey, String(Date.now() + startCooldownMinutes * 60 * 1000));
+        showToast(`Extended +${Number(d.extendHours||addTimeHours)}h`);
+        await refreshTokens();
+        setBuyTokenLock();
+        renderKeys();
+      });
+      body.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{deleteTargetKey = b.dataset.del || ""; document.getElementById("deleteConfirm").style.display="flex";});
+      if(genWrap){
+        genWrap.style.display = (!keyless && freeCount < generateLimit) ? "flex" : "none";
+      }
+      const genBtn = document.getElementById("generateNewKeyBtn");
+      if(genBtn){
+        const enough = currentTokens >= Math.max(0, costGen||0);
+        genBtn.classList.toggle("dim", !enough);
+        genBtn.textContent = `+ Generate A New Key (-${Math.max(0, costGen||0)} Token)`;
+      }
+    }
+
+    window.onFirstCaptcha=()=>{setHuman();document.getElementById("firstCaptcha").style.display="none";showMainOrSelector();};
+    window.onStartCaptcha=async()=>{
+      document.getElementById("startCaptcha").style.display="none";
+      let activeRid = rid;
+      if(!activeRid){
+        try{
+          const rr = await fetch("/api/jx/keys/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({hwid, forceRequest:true})});
+          const dd = await rr.json();
+          if(dd && dd.ok && dd.requestId) activeRid = dd.requestId;
+        }catch(e){}
+      }
+      if(!activeRid){ showToast("Request link missing."); return; }
+      window.location.href=`${base}/goto?hwid=${encodeURIComponent(hwid)}&rid=${encodeURIComponent(activeRid)}&checkpoint=${cp}&service=${encodeURIComponent(service)}`;
+    };
+
+    function youtubeEmbed(url){
+      try{
+        const u = new URL(url);
+        const host = u.hostname.replace(/^www\./,"").toLowerCase();
+        let id = "";
+        if (host === "youtu.be") {
+          id = u.pathname.replace(/^\//,"");
+        } else if (host.includes("youtube.com")) {
+          if (u.pathname.startsWith("/embed/")) id = u.pathname.split("/embed/")[1] || "";
+          else id = u.searchParams.get("v") || "";
+        }
+        if (!id) return null;
+        id = id.split(/[?&/]/)[0];
+        const origin = encodeURIComponent(window.location.origin);
+        // Use youtube-nocookie for fewer embed issues.
+        return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1&origin=${origin}`;
+      }catch(e){ return null; }
+    }
+
+    function resolveTutorialUrl(raw){
+      const text = String(raw || "").trim();
+      if(!text) return "";
+      const m = text.match(/src\s*=\s*["']([^"']+)["']/i);
+      return m ? String(m[1] || "").trim() : text;
+    }
+
+    function renderTutorial(){
+      const wrap = document.getElementById("tutorialWrap");
+      const link = document.getElementById("tutorialLink");
+      const player = document.getElementById("tutorialPlayer");
+      if(!wrap || !player || !link) return;
+      if(!tutorialEnabled || !tutorialUrl){
+        wrap.style.display = "none";
+        return;
+      }
+      const resolved = resolveTutorialUrl(tutorialUrl);
+      if(!resolved){
+        wrap.style.display = "none";
+        return;
+      }
+      wrap.style.display = "flex";
+      link.href = resolved;
+      const embed = youtubeEmbed(resolved);
+      if(embed){
+        player.innerHTML = `<iframe src="${embed}" style="width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
+      }else{
+        player.innerHTML = `Click the link above to watch: <a href="${resolved}" target="_blank" rel="noopener noreferrer" style="color:#93c5fd;font-weight:700;">${resolved}</a>`;
+      }
+    }
+
+    async function maybeShowBoost(){
+      if(!boostEnabled) return;
+      const overlay = document.getElementById("boostOverlay");
+      const links = document.getElementById("boostLinks");
+      const hint = document.getElementById("boostHint");
+      if(!overlay || !links) return;
+      // Server-side HWID cooldown for task screen (prevents incognito bypass)
+      try{
+        const r = await fetch(`/api/jx/task/status?hwid=${encodeURIComponent(hwid)}`);
+        const d = await r.json();
+        if(!d || !d.ok || d.show !== true) return;
+      }catch(e){ return; }
+      const entries = [
+        { label: "Like the YouTube Video", url: boostLike },
+        { label: "Subscribe to the Channel", url: boostSubscribe },
+        { label: "Join the Discord Server", url: boostDiscord },
+      ].filter(x => x.url);
+      if(!entries.length) return;
+      links.innerHTML = "";
+      let doneCount = 0;
+      const total = entries.length;
+      function updateHint(){
+        if(!hint) return;
+        hint.textContent = `Finish all tasks to close this screen. (${doneCount}/${total})`;
+      }
+      async function markDone(btn){
+        if(btn.dataset.done === "1") return;
+        btn.dataset.done = "1";
+        btn.disabled = true;
+        btn.textContent = "Done";
+        btn.style.borderColor = "rgba(34,197,94,.8)";
+        btn.style.color = "#bbf7d0";
+        doneCount += 1;
+        updateHint();
+        if(doneCount >= total){
+          overlay.style.display = "none";
+          try{
+            await fetch("/api/jx/task/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ hwid }),
+            });
+          }catch(e){}
+        }
+      }
+
+      entries.forEach(ent=>{
+        const b = document.createElement("button");
+        b.className = "btn";
+        b.style.background = "rgba(255,255,255,.06)";
+        b.style.color = "#e6ecff";
+        b.style.border = "1px solid rgba(255,255,255,.14)";
+        b.textContent = ent.label;
+        b.onclick = ()=>{
+          if(b.dataset.running === "1" || b.dataset.done === "1") return;
+          b.dataset.running = "1";
+          try{ window.open(ent.url, "_blank", "noopener,noreferrer"); }catch(e){}
+          b.disabled = true;
+          b.textContent = `${ent.label}...`;
+          // Hidden 5s timer (no visible countdown text)
+          setTimeout(async ()=>{
+            b.dataset.running = "0";
+            await markDone(b);
+          }, 5000);
+        };
+        links.appendChild(b);
+      });
+      overlay.style.display = "flex";
+      updateHint();
+    }
+
+    function tickExtensionCooldowns(){
+      const btns = document.querySelectorAll("[data-ext][data-cd-until]");
+      const now = Date.now();
+      btns.forEach((b)=>{
+        const until = Number(b.dataset.cdUntil || 0);
+        const canMore = String(b.dataset.canMore||"1") === "1";
+        const done = localStorage.getItem(progressKey)==="1";
+        if(!done) return;
+        if(canMore) return;
+        if(!until || until <= now) return;
+        const remain = until - now;
+        b.classList.add("dim");
+        b.classList.add("btn-lock");
+        b.innerHTML = lockSvg() + fmtCdLong(remain);
+      });
+    }
+
+    function showMainOrSelector(){
+      if(keyless){document.getElementById("keylessCard").style.display="block";document.getElementById("serviceSelector").style.display="none";document.getElementById("mainPanel").style.display="none";return;}
+      const isSelector = cp===0 || new URLSearchParams(location.search).get("pick")==="1";
+      const forcePick = new URLSearchParams(location.search).get("pick")==="1";
+      // If user pastes the original generated link again (cp=0),
+      // reuse last selected service for THIS HWID and continue automatically.
+      if (cp === 0 && !forcePick) {
+        const pref = readServicePref();
+        if (pref) {
+          service = pref;
+          location.href = `${base}/checkpoint?hwid=${encodeURIComponent(hwid)}&rid=${encodeURIComponent(rid)}&cp=1&service=${encodeURIComponent(service)}`;
+          return;
+        }
+      }
+      document.getElementById("serviceSelector").style.display=isSelector?"block":"none";
+      document.getElementById("mainPanel").style.display=isSelector?"none":"block";
+      if(!isSelector){
+        const doneSteps = localStorage.getItem(progressKey)==="1" ? maxCp : Math.max(0,cp-1);
+        setProgressDisplay(doneSteps,maxCp);
+        document.getElementById("serviceLabel").textContent="Service: "+service.charAt(0).toUpperCase()+service.slice(1);
+        renderTutorial();
+        // Boost overlay should show on main panel only (not service selector) and only once.
+        maybeShowBoost();
+      }
+    }
+
+    document.getElementById("selectorContinue").onclick=()=>{
+      if(!service){ showToast("Select a service first"); return; }
+      saveServicePref(service);
+      // Do not wipe completed progress when user switches service after finishing.
+      if(localStorage.getItem(progressKey)!=="1") localStorage.setItem(progressKey, "0");
+      location.href=`${base}/checkpoint?hwid=${encodeURIComponent(hwid)}&rid=${encodeURIComponent(rid)}&cp=1&service=${encodeURIComponent(service)}`;
+    };
+    document.getElementById("switchBtn").onclick=()=>{ location.href=`${base}/checkpoint?hwid=${encodeURIComponent(hwid)}&rid=${encodeURIComponent(rid)}&cp=0&pick=1&service=${encodeURIComponent(service)}`; };
+    const startBtn = document.getElementById("startBtn");
+    function tickStartCooldown(){
+      if(!startBtn) return;
+      const localUntil = Number(localStorage.getItem(startCooldownKey) || 0);
+      const serverUntil = Number(serverStartUntil || 0);
+      const remain = Math.max(0, Math.max(localUntil, serverUntil) - Date.now());
+      const done = localStorage.getItem(progressKey)==="1";
+      if(/^TEST_/i.test(hwid)){ startBtn.textContent = "START"; startBtn.disabled = false; return; }
+      if(done){
+        startBtn.disabled = true;
+        startBtn.classList.add("btn-lock");
+        startBtn.innerHTML = lockSvg() + (remain > 0 ? fmtCd(remain) : "LOCKED");
+        return;
+      }
+      startBtn.classList.remove("btn-lock");
+      if(remain > 0){
+        startBtn.classList.add("btn-lock");
+        startBtn.innerHTML = lockSvg() + fmtCd(remain);
+        startBtn.disabled = true;
+      }else{
+        startBtn.textContent = "START";
+        startBtn.disabled = false;
+      }
+    }
+    setInterval(tickStartCooldown, 1000);
+    tickStartCooldown();
+    startBtn.onclick=()=>{
+      if(/^TEST_/i.test(hwid)){ document.getElementById("startCaptcha").style.display="flex"; return; }
+      const localUntil = Number(localStorage.getItem(startCooldownKey) || 0);
+      const serverUntil = Number(serverStartUntil || 0);
+      const remain = Math.max(0, Math.max(localUntil, serverUntil) - Date.now());
+      if(remain > 0){ showToast("Cooldown active"); return; }
+      document.getElementById("startCaptcha").style.display="flex";
+    };
+    document.getElementById("copyKeyless").onclick=async()=>{ await navigator.clipboard.writeText("JX_KEYLESS"); showToast("Copied"); };
+    document.getElementById("generateNewKeyBtn").onclick=async()=>{
+      try{
+        if (document.getElementById("generateNewKeyBtn").classList.contains("dim")) {
+          showToast(`Not enough tokens (need ${Math.max(0, costGen||0)})`);
+          return;
+        }
+        const r = await fetch("/api/jx/keys/generate-new", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ hwid }) });
+        const d = await r.json();
+        if(!d.ok) throw new Error(d.message || "Generate failed");
+        const key = d.key;
+        if(key){
+          const storageKey = "__jx_saved_key_" + String(key).replace(/[^a-zA-Z0-9_-]/g,"");
+          localStorage.setItem(storageKey, JSON.stringify({ key, hwid, expiresAt: d.expiresAt || null, tier: d.tier || "free", savedAt: Date.now(), lastActivityAt: Date.now() }));
+        }
+        localStorage.setItem(progressKey, "0");
+        localStorage.setItem(startCooldownKey, String(Date.now() + startCooldownMinutes * 60 * 1000));
+        try{const u=new URL(window.location.href);u.searchParams.delete("completed");history.replaceState({}, "", u.toString());}catch(e){}
+        setProgressDisplay(0,maxCp);
+        showToast("New key generated");
+        await refreshTokens();
+        setBuyTokenLock();
+        renderKeys();
+        const wrap = document.getElementById("generateNewWrap");
+        if(wrap) wrap.style.display = "none";
+      }catch(e){ showToast(e.message || "Generate failed"); }
+    };
+
+    if (buyTokenBtn) {
+      buyTokenBtn.onclick = async () => {
+        const done = localStorage.getItem(progressKey)==="1";
+        if (!done) return;
+        if (currentTokens >= Math.max(1, buyTokenCap||3)) {
+          showToast(`Token limit reached (${Math.max(1, buyTokenCap||3)})`);
+          return;
+        }
+        buyTokenBtn.disabled = true;
+        try{
+          const r = await fetch("/api/jx/tokens/claim", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ hwid }) });
+          const d = await r.json();
+          if(!d.ok) throw new Error(d.message || "Failed");
+          localStorage.setItem(progressKey, "0");
+          try{const u=new URL(window.location.href);u.searchParams.delete("completed");history.replaceState({}, "", u.toString());}catch(e){}
+          setProgressDisplay(0,maxCp);
+          showToast(`+${Number(d.added||buyReward)} Token`);
+          await refreshTokens();
+          setBuyTokenLock();
+          renderKeys();
+        }catch(e){
+          showToast(e.message || "Failed");
+          await refreshTokens();
+          setBuyTokenLock();
+        }finally{
+          buyTokenBtn.disabled = false;
+        }
+      };
+    }
+    document.getElementById("deleteNo").onclick=()=>{ document.getElementById("deleteConfirm").style.display="none"; deleteTargetKey = ""; };
+    document.getElementById("deleteYes").onclick=async()=>{
+      if(!deleteTargetKey) return;
+      try{
+        const res = await fetch("/api/jx/keys/delete-own", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ hwid, key: deleteTargetKey }) });
+        const data = await res.json();
+        if(!data.ok) throw new Error(data.message || "Delete failed");
+        showToast("Deleted");
+        const newReq = await fetch("/api/jx/keys/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({hwid})});
+        const reqData = await newReq.json();
+        if(reqData && reqData.ok && reqData.requestId){
+          location.href = `${base}/checkpoint?hwid=${encodeURIComponent(hwid)}&rid=${encodeURIComponent(reqData.requestId)}&cp=1&service=${encodeURIComponent(service)}`;
+          return;
+        }
+      }catch(e){ showToast("Delete failed"); }
+      document.getElementById("deleteConfirm").style.display="none";
+      deleteTargetKey = "";
+      renderKeys();
+    };
+    saveServicePref(service);
+    if (completedFlag) {
+      localStorage.setItem(progressKey, "1");
+    } else if (cp <= 1) {
+      // Only reset to 0 if this browser hasn't already completed (prevents 1/1 -> 0/1 when switching services).
+      if (localStorage.getItem(progressKey) !== "1") localStorage.setItem(progressKey, "0");
+    }
+    // Show bypass warning toast if redirected by anti-bypass
+    try{
+      const u = new URL(window.location.href);
+      if (u.searchParams.get("bypass")==="1") {
+        showToast("You Have Been Detected Bypassing The Task. Please Dont Bypass It.");
+        u.searchParams.delete("bypass");
+        history.replaceState({}, "", u.toString());
+      }
+      if (u.searchParams.get("cd")==="1") {
+        showToast("Cooldown active");
+        u.searchParams.delete("cd");
+        history.replaceState({}, "", u.toString());
+      }
+    }catch(e){}
+    const genWrap = document.getElementById("generateNewWrap");
+    if(genWrap) genWrap.style.display = "none";
+    async function syncStartCooldown(){
+      if(/^TEST_/i.test(hwid)) return;
+      try{
+        const r = await fetch(`/api/jx/cooldown/start?hwid=${encodeURIComponent(hwid)}`);
+        const d = await r.json();
+        if(d && d.ok){
+          serverStartUntil = Number(d.until) || 0;
+        }
+      }catch(e){}
+    }
+
+    (async ()=>{
+      await syncStartCooldown();
+      await refreshTokens();
+      setBuyTokenLock();
+      selectUI(); await renderKeys(); showMainOrSelector();
+      // refresh server cooldown occasionally
+      setInterval(syncStartCooldown, 30000);
+      setInterval(refreshTokens, 15000);
+      setInterval(setBuyTokenLock, 1000);
+    })();
+    setInterval(tickExtensionCooldowns, 1000);
+    tickExtensionCooldowns();
+    if(!keyless && cp===0 && !humanDone()){ document.getElementById("firstCaptcha").style.display="flex"; }
+    setTimeout(__hideLoader, 1000);
+  </script>
+</body>
+</html>
